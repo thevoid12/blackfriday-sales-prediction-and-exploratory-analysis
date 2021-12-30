@@ -1,0 +1,518 @@
+---
+title: "Fda J Component"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Reading Dataset
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(Amelia)
+library(caTools)
+library(rpart)
+library(rpart.plot)
+df <- read.csv('BlackFridayDataset.csv')
+summary(df)
+
+```
+
+## Top 5 purchased product
+
+```{r}
+Most_sold <- df %>% group_by(Product_ID) %>% summarise(count=n()) %>% arrange(desc(count))
+top_5 <- Most_sold[1:5, ]
+names(top_5) <- c('Product_ID', 'Quantity')
+ggplot(top_5,aes(factor(
+  Product_ID,
+  level = c('P00265242','P00110742','P00025442','P00112142','P00057642')), Quantity)) + geom_bar(stat = 'identity',fill = c('#c4d8ba', '#d8ceba', '#bac4d8', '#e1daae', '#fa5845')
+) + xlab('Product_ID') + theme_bw()
+
+```
+
+## Top 5 products based on revenue
+
+```{r}
+Revenue <- df %>% group_by(Product_ID) %>% summarise(revenue = sum(Purchase)) %>% arrange(desc(revenue))
+top_5_revenue <- Revenue[1:5, ]
+names(top_5_revenue) <- c('Product_ID', 'Revenue')
+ggplot(top_5_revenue,aes(factor(
+  Product_ID,
+  level = c('P00025442','P00110742','P00255842','P00184942','P00059442')), Revenue)) + geom_bar(stat = 'identity',fill = c('#c4d8ba', '#d8ceba', '#bac4d8', '#e1daae', '#fa5845')
+) + xlab('Product_ID') + theme_bw()
+
+```
+
+## Univariate and Bivariate Analysis
+## Purchase Distribution
+
+```{r}
+ggplot(df, aes(Purchase)) + 
+  geom_histogram(aes(y=..density..), fill="light blue") +
+  geom_density(alpha=1, color = '#49a4aa', size = 1.2) + theme_bw() + xlab('Amount Spent by each buyer') + ylab('Number of buyers') + ggtitle('Purchase Distribution') +  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+```
+
+## Correlation between num preidctors and purchase
+
+```{r}
+data <- df[, c(1, 5, 9, 10, 11)]
+res <- cor(data, use = "complete.obs")
+res <- round(res, 2)
+corrplot(res, tl.col = 'black', tl.cex = .7, tl.srt = 45)
+
+```
+
+## Occupation
+
+```{r}
+
+ggplot(df, aes(Occupation)) + geom_bar(fill= 'light blue') + theme_classic()
+
+```
+
+```{r}
+
+by_occ <- df %>% group_by(Occupation) %>% summarise(Spending = mean(Purchase))
+ggplot(by_occ, aes(Occupation, Spending)) + geom_bar(stat='identity', fill= 'light blue')
+
+
+```
+
+## Martial Status
+
+```{r}
+
+ggplot(df,aes(Marital_Status)) + geom_bar(fill= c('red','blue'))
+table(df$Marital_Status)
+
+
+```
+
+## Comparison of purchase done by single and couples
+
+```{r}
+
+by_mar <- df %>% group_by(Marital_Status) %>% summarise(Purchase = mean(Purchase))
+ggplot(by_mar, aes(Marital_Status, Purchase)) + geom_bar(stat = 'identity', fill = c('red', 'blue'))
+
+
+```
+
+## Product Category
+
+```{r}
+
+ggplot(df, aes(Product_Category_1)) + geom_bar(fill = 'light blue') + scale_x_continuous(breaks = 1:20)
+
+by_prod <- df %>% group_by(Product_Category_1) %>% summarise(Purchase = mean(Purchase))
+ggplot(by_prod, aes(Product_Category_1, Purchase)) + geom_bar(stat = 'identity', fill = 'light blue') + scale_x_continuous(breaks = 1:20) 
+
+
+```
+
+## Gender
+
+```{r}
+
+ggplot(df,aes(Gender)) + geom_bar(fill= c('red','blue')) + theme_bw()
+
+by_gend <- df %>% group_by(Gender) %>% summarise(Purchase = mean(Purchase))
+## Comparison of Sales between Male and Female
+ggplot(by_gend, aes(Gender, Purchase)) + geom_bar(stat='identity', fill = c('red', 'blue'))
+
+
+```
+
+## Age
+
+
+```{r}
+## Age Range
+ggplot(df,aes(Age)) + geom_bar(fill = c('#c5fafa', 
+  '#002ba1', 
+  '#6287ec', 
+  '#dd0244', 
+  '#c90000', 
+  '#fb0202', 
+  '#ff9ecb') ) + theme_bw()
+
+## Purchase done by each age group
+
+by_age <- df %>% group_by(Age) %>% summarise(Purchase = mean(Purchase))
+ggplot(by_age, aes(Age, Purchase)) + geom_bar(
+  stat = 'identity',
+  fill = c('#c5fafa', 
+  '#002ba1', 
+  '#6287ec', 
+  '#dd0244', 
+  '#c90000', 
+  '#fb0202', 
+  '#ff9ecb')
+) 
+
+
+```
+
+## City Category
+
+```{r}
+
+ggplot(df,aes(City_Category)) + geom_bar(fill = c('red','blue','green')) 
+
+## Purchase done by each city category
+
+by_city <- df %>% group_by(City_Category) %>% summarise(Purchase = mean(Purchase))
+ggplot(by_city, aes(City_Category, Purchase)) + geom_bar(
+  stat = 'identity',
+  fill = c('red','blue','green')
+)
+
+
+```
+
+## Number of years customer lived in the city that they are buying.
+
+```{r}
+
+ggplot(df,aes(Stay_In_Current_City_Years)) + geom_bar(fill = c(
+    '#c4d8ba',
+    '#d8ceba',
+    '#bac4d8',
+    '#6f2859',
+    '#e6e6fa'
+  ))   
+
+## Purchase made by each city category
+
+by_stay <- df %>% group_by(Stay_In_Current_City_Years) %>% summarise(Purchase = mean(Purchase))
+ggplot(by_stay, aes(Stay_In_Current_City_Years, Purchase)) + geom_bar(
+  stat = 'identity',
+  fill = c(
+    '#c4d8ba',
+    '#d8ceba',
+    '#bac4d8',
+    '#6f2859',
+    '#e6e6fa'
+  )
+)
+
+
+```
+
+## Missing Data
+
+```{r}
+
+missmap(df, col = c('yellow','black'), main = 'check') 
+
+
+
+```
+
+## Structure
+
+```{r}
+
+str(df)
+df$User_ID <- as.factor(df$User_ID)
+df$Product_ID <- as.factor(df$Product_ID)
+df$Gender <- as.factor(df$Gender)
+df$Product_Category_1 <- as.factor(df$Product_Category_1)
+df$Product_Category_2 <- as.factor(df$Product_Category_2)
+df$Product_Category_3 <- as.factor(df$Product_Category_3)
+df$Marital_Status <- as.factor(df$Marital_Status)
+df$City_Category <- as.factor(df$City_Category)
+df$Occupation <- as.factor(df$Occupation)
+df$Stay_In_Current_City_Years <- as.factor(df$Stay_In_Current_City_Years)
+df$Age <- as.numeric(df$Age)
+df$Product_ID <- NULL
+df$User_ID <- NULL
+df$Product_Category_2 <- NULL
+df$Product_Category_3 <- NULL
+## Product ID and User ID as they are not required for regression analysis
+
+
+```
+
+## Splitting data
+
+
+```{r}
+
+set.seed(101)
+sample <- sample.split(df$Purchase, SplitRatio = .7)
+train <- subset(df, sample == T)
+test <- subset(df, sample == F)
+
+
+```
+## Decision Tree
+
+```{r}
+
+tree <- rpart(Purchase ~Product_Category_1, method = 'anova',train)
+prp(tree)
+
+
+```
+
+```{r}
+
+predicted <- predict(tree, test[,-8])
+predicted <- as.data.frame(predicted)
+head(predicted)
+
+
+```
+
+```{r}
+
+RMSE(predicted$predicted,test$Purchase)
+
+
+```
+## data clearing so that we can apply regression
+
+```{r}
+
+user.id =df$User_ID
+product.id = df$Product_ID
+gender = df$Gender
+age.range = df$Age
+occupation = df$Occupation
+city = df$City_Category
+years.in.current.city = as.numeric(df$Stay_In_Current_City_Years)
+marital.status = df$Marital_Status
+product.category.1 =df$Product_Category_1
+
+
+
+```
+
+#Data Cleaning
+#There are NAs in product category 2 & 3, to do operations we convert NAs to 0 so that opertaions can be performed
+# Convert NA to 0 to perform calculations product.category.2 = Product_Category_2
+```{r}
+df <- read.csv('BlackFridayDataset.csv')
+df$Product_Category_2[is.na(df$Product_Category_2)]=0
+
+```
+
+# convert NA to 0 to perform calculations 
+```{r}
+#product.category.3 = df$Product_Category_3
+#product.category.3[is.na(product.category.3)] = 0
+df$Product_Category_3[is.na(df$Product_Category_3)]=0
+
+
+
+```
+
+# making source and target col
+```{r}
+ df1 <- select(df,Occupation,Stay_In_Current_City_Years,Marital_Status,Product_Category_1,Product_Category_2,Product_Category_3) #error 49%
+#df1 <- select(df,Stay_In_Current_City_Years,Marital_Status,Product_Category_1,Product_Category_2,Product_Category_3) #error 49%
+#df1 <- select(df,Marital_Status,Product_Category_1,Product_Category_2,Product_Category_3)
+#df1 <- select(df,Occupation,Stay_In_Current_City_Years,Marital_Status,Product_Category_1,Product_Category_2,Product_Category_3)
+head(df1)
+
+```
+
+## Linear Regression
+
+```{r}
+
+model <- lm(df$Purchase ~., data=df1)
+model
+
+
+
+```
+# summary of the model
+```{r}
+
+summary(model)
+
+
+```
+# Residual Standard Error
+```{r}
+
+sigma(model)
+
+sigma(model)*100/mean(df$Purchase)  #percentage error
+```
+# confidence interval of the model
+```{r}
+
+confint(model)
+
+
+```
+
+# prediction interval on a particular outcome of a multiple regression
+```{r}
+
+pred_int_pt <- predict(model,df,level = .2,interval = "prediction")
+pred_int_pt
+library(tidyverse)
+library(caret)
+df3=df[1:1000,]
+set.seed(100)
+train <- sample(nrow(df3), 0.7*nrow(df3), replace = FALSE)
+TrainSet <- df3[train,]
+ValidSet <- df3[-train,]
+
+multilinear_RMSE <- RMSE(pred_int_pt,ValidSet$Purchase)
+multilinear_RMSE
+
+```
+# random forest
+```{r}
+set.seed(101)
+sample <- sample.split(df$Purchase, SplitRatio = .7)
+train <- subset(df, sample == T)
+test <- subset(df, sample == F)
+
+library(randomForest)
+library(party)
+
+
+```
+# Create the forest.
+```{r}
+df2=df[1:1000,]
+output.forest <- randomForest(Purchase ~ Product_Category_1+Product_Category_2+Product_Category_3,data =df2,ntree=500)
+#pred_1 = predict(output.forest, df2$Purchase)
+#table(y_test, pred_1)
+#accuracy_m1 = mean(y_test == pred_1)
+print(output.forest)
+print(importance(output.forest),type = 2)
+
+
+```
+
+
+
+
+```{r}
+set.seed(100)
+train <- sample(nrow(df2), 0.7*nrow(df2), replace = FALSE)
+TrainSet <- df2[train,]
+ValidSet <- df2[-train,]
+summary(TrainSet)
+summary(ValidSet)
+
+```
+
+```{r}
+# Create a Random Forest model with default parameters
+library(randomForest)
+model1 <- randomForest(Purchase ~ .,
+                         data = TrainSet,
+                         ntree= 159,
+                         mtry=100,
+                         keep.forest=TRUE,
+                         importance=TRUE)
+plot(model1)
+
+
+getTree(model1, 1)
+
+
+ 
+
+```
+
+```{r}
+
+which.min(model1$mse)
+#library(devtools)
+#devtools::install_github('araastat/reprtree')
+#library(reprtree)
+library(varImp)
+#varImp(model1)
+varImpPlot(model1)
+varImpPlot(model1, type=1)
+
+
+ 
+
+```
+
+
+
+```{r}
+library(tidyverse)
+y_hat <- predict(model1, TrainSet)
+
+TRAIN.rf_scored <- as_tibble(cbind(TrainSet, y_hat))
+glimpse(TRAIN.rf_scored)
+#glimpse(TRAIN.rf_scored)
+
+
+ 
+
+```
+
+## Confusion Matrix on training set
+
+```{r}
+library(yardstick)
+RMSE_rf_Train_random_forest <- yardstick::rmse(TRAIN.rf_scored, truth=Purchase, estimate=y_hat)
+
+RMSE_rf_Train_random_forest
+
+
+ 
+
+```
+
+
+## Polynomial Regression
+
+```{r}
+library(tidyverse)
+library(caret)
+df2=df[1:1000,]
+set.seed(100)
+train <- sample(nrow(df2), 0.7*nrow(df2), replace = FALSE)
+TrainSet <- df2[train,]
+ValidSet <- df2[-train,]
+summary(TrainSet)
+summary(ValidSet)
+model <- lm(Purchase ~ poly(Product_Category_1+Product_Category_2+Product_Category_3, 5, raw = TRUE),
+            data = TrainSet)
+summary(model)
+#mse(model)
+sigma(model)
+sigma(model)*100/mean(ValidSet$Purchase)
+
+pred <- predict(model,ValidSet)
+pred
+poly_RMSE <- RMSE(pred,ValidSet$Purchase)
+poly_RMSE
+ 
+
+```
+
+## conclusion 
+
+```{r}
+ library(ggplot2)
+
+my_df2<- data.frame(model=c("MultiLinear_Regression","Polynomial_Regression","random_forest","decision tree"),RMSE=c(5576.375,5071.473,1477.429,3103.864	))
+ggplot(my_df2,aes(x=model,y=RMSE))+geom_line(aes(size=0.25,color='red'))+geom_point(aes(size=0.5,color='blue'))
+my_df2
+ 
+
+```
